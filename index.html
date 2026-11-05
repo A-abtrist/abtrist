@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abtrist AI Art Support</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0b0720;
+            color: #fff;
+            font-family: "Segoe UI", Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* animated background */
+        .bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.55;
+            animation: float 14s ease-in-out infinite;
+        }
+        .blob.one   { width: 420px; height: 420px; background: #7c3aed; top: -120px; left: -100px; }
+        .blob.two   { width: 380px; height: 380px; background: #ec4899; bottom: -140px; right: -80px; animation-delay: -5s; }
+        .blob.three { width: 300px; height: 300px; background: #06b6d4; top: 40%; left: 55%; animation-delay: -9s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33%      { transform: translate(40px, -50px) scale(1.1); }
+            66%      { transform: translate(-40px, 40px) scale(0.95); }
+        }
+
+        /* chat card */
+        .chat-container {
+            position: relative;
+            z-index: 1;
+            width: 420px;
+            max-width: 100%;
+            height: min(680px, 96vh);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: rgba(20, 15, 45, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 26px;
+            box-shadow: 0 25px 80px rgba(124, 58, 237, 0.35);
+            animation: rise 0.8s ease both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(30px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 18px 20px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.85), rgba(236, 72, 153, 0.85));
+        }
+
+        .avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: bob 3s ease-in-out infinite;
+        }
+
+        @keyframes bob {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-4px); }
+        }
+
+        .title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70%  { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+
+        /* instagram button */
+        .insta-bar { padding: 12px 16px 4px; text-align: center; }
+
+        .insta-bar a {
+            display: inline-block;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 10px 18px;
+            border-radius: 30px;
+            background: linear-gradient(90deg, #f09433, #dc2743, #bc1888, #f09433);
+            background-size: 250% 100%;
+            animation: shimmer 4s linear infinite;
+            box-shadow: 0 6px 20px rgba(220, 39, 67, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .insta-bar a:hover { transform: translateY(-2px) scale(1.03); }
+
+        @keyframes shimmer {
+            0%   { background-position: 0% 50%; }
+            100% { background-position: 250% 50%; }
+        }
+
+        /* messages */
+        #messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            scroll-behavior: smooth;
+        }
+
+        #messages::-webkit-scrollbar { width: 6px; }
+        #messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 15px;
+            font-size: 14.5px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            animation: pop 0.35s ease both;
+        }
+
+        @keyframes pop {
+            from { opacity: 0; transform: translateY(12px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px 18px 18px 4px;
+        }
+
+        .user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            border-radius: 18px 18px 4px 18px;
+            box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+        }
+
+        .message a { color: #67e8f9; word-break: break-all; }
+
+        /* typing dots */
+        .typing { display: flex; gap: 5px; padding: 14px 16px; }
+        .typing span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #c4b5fd;
+            animation: blink 1.2s infinite;
+        }
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+            40%           { transform: translateY(-6px); opacity: 1; }
+        }
+
+        /* quick buttons */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 16px 10px;
+        }
+
+        .chips button {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(196, 181, 253, 0.5);
+            color: #e9d5ff;
+            padding: 8px 14px;
+            font-size: 13px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            animation: pop 0.5s ease both;
+        }
+
+        .chips button:hover {
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            border-color: transparent;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* input */
+        .input-area {
+            display: flex;
+            gap: 8px;
+            padding: 12px 14px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        input {
+            flex: 1;
+            padding: 13px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 14.5px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input::placeholder { color: rgba(255, 255, 255, 0.5); }
+
+        input:focus {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25);
+        }
+
+        #sendBtn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #fff;
+            font-size: 18px;
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            box-shadow: 0 6px 18px rgba(236, 72, 153, 0.4);
+            transition: transform 0.2s;
+        }
+
+        #sendBtn:hover { transform: scale(1.1) rotate(-8deg); }
+        #sendBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        @media (max-width: 480px) {
+            .chat-container { height: 100vh; border-radius: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg">
+        <div class="blob one"></div>
+        <div class="blob two"></div>
+        <div class="blob three"></div>
+    </div>
+
+    <div class="chat-container">
+
+        <div class="header">
+            <div class="avatar">🎨</div>
+            <div>
+                <div class="title">Abtrist AI</div>
+                <div class="status"><span class="dot"></span> Online · Art Assistant</div>
+            </div>
+        </div>
+
+        <div class="insta-bar">
+            <a href="https://www.instagram.com/abtrist/" target="_blank" rel="noopener">
+                📸 View our art on Instagram @abtrist
+            </a>
+        </div>
+
+        <div id="messages"></div>
+
+        <div class="chips" id="chips">
+            <button onclick="sendMessage('I want to see your art')">🖼️ See your art</button>
+            <button onclick="sendMessage('Tell me about digital art')">✨ Digital art</button>
+            <button onclick="sendMessage('Tell me about 3D art')">🧊 3D art</button>
+            <button onclick="sendMessage('I want a custom artwork')">🎯 Custom order</button>
+        </div>
+
+        <div class="input-area">
+            <input id="userInput" type="text" placeholder="Type your message..." autocomplete="off">
+            <button id="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+
+    </div>
+
+    <script>
+        const input = document.getElementById("userInput");
+        const messages = document.getElementById("messages");
+        const sendBtn = document.getElementById("sendBtn");
+        const chips = document.getElementById("chips");
+
+        const BUSY_TEXT = "Server is busy right now. Please try again in a moment.";
+
+        // chat ki yaadasht
+        const history = [];
+
+        // text mein links ko clickable bana deta hai
+        function setText(div, text) {
+            div.textContent = "";
+            const parts = text.split(/(https?:\/\/[^\s]+)/g);
+            parts.forEach(function (part) {
+                if (/^https?:\/\//.test(part)) {
+                    const a = document.createElement("a");
+                    a.href = part;
+                    a.target = "_blank";
+                    a.rel = "noopener";
+                    a.textContent = part;
+                    div.appendChild(a);
+                } else {
+                    div.appendChild(document.createTextNode(part));
+                }
+            });
+        }
+
+        function scrollDown() {
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addMessage(text, sender) {
+            const div = document.createElement("div");
+            div.className = "message " + sender;
+            setText(div, text);
+            messages.appendChild(div);
+            scrollDown();
+            return div;
+        }
+
+        function addTyping() {
+            const div = document.createElement("div");
+            div.className = "message bot typing";
+            div.innerHTML = "<span></span><span></span><span></span>";
+            messages.appendChild(div);
+            scrollDown();
+            return div;
+        }
+
+        // welcome message
+        addMessage(
+            "Hello! Welcome to Abtrist AI 🎨\nWe create digital art and 3D art. See our work on Instagram: https://www.instagram.com/abtrist/\nHow can I help you today?",
+            "bot"
+        );
+
+        async function sendMessage(preset) {
+            const text = (typeof preset === "string" ? preset : input.value).trim();
+            if (text === "") return;
+
+            chips.style.display = "none";
+            addMessage(text, "user");
+            history.push({ role: "user", text: text });
+            input.value = "";
+            sendBtn.disabled = true;
+
+            const typing = addTyping();
+
+            try {
+                const res = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ history: history })
+                });
+                const data = await res.json();
+
+                typing.classList.remove("typing");
+                setText(typing, data.reply);
+
+                if (res.ok) {
+                    history.push({ role: "model", text: data.reply });
+                } else {
+                    history.pop(); // fail hone wala message history se hata dein
+                }
+            } catch (err) {
+                typing.classList.remove("typing");
+                setText(typing, BUSY_TEXT);
+                history.pop();
+            }
+
+            sendBtn.disabled = false;
+            input.focus();
+            scrollDown();
+        }
+
+        input.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+
+</body>
+</html>
