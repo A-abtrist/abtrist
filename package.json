@@ -6,3 +6,6 @@
     "openai": "^7.50.0"
   }
 }
+"scripts": {
+  "start": "node server.js"
+},
